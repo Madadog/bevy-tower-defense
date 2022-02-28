@@ -2,10 +2,15 @@ use std::default;
 
 use bevy::prelude::*;
 
+use crate::input::*;
+
+mod input;
+
 fn main() {
     println!("Hello, world!");
     App::new()
         .add_plugins(DefaultPlugins)
+        .add_plugin(PlayerInputPlugin)
         .add_startup_system(setup)
         .run();
 }
