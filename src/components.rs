@@ -18,9 +18,7 @@ impl Plugin for ComponentsPlugin {
             .add_system(follow_path)
             .add_system(update_lifespan)
             .add_system(despawn_dead)
-            .add_system(absorb_bullets)
-            .add_system(monitor_gold)
-            .add_system(monitor_lives);
+            .add_system(absorb_bullets);
     }
 }
 
