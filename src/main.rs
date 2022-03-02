@@ -8,6 +8,7 @@ use crate::background::*;
 use crate::pathfinding::*;
 use crate::ui::*;
 use crate::stages::*;
+use crate::build::*;
 
 mod input;
 mod components;
@@ -16,6 +17,7 @@ mod pathfinding;
 mod ui;
 mod rectangle;
 mod stages;
+mod build;
 
 fn main() {
     println!("Hello, world!");
@@ -27,6 +29,7 @@ fn main() {
         .add_plugin(NavigationPlugin)
         .add_plugin(StagePlugin)
         .add_plugin(UiPlugin)
+        .add_plugin(BuildPlugin)
         .add_startup_system(setup)
         .add_startup_system(spawn_background)
         .add_system(debug_keys)
@@ -93,16 +96,16 @@ fn debug_keys(
     mut gold: ResMut<Gold>,
     mut stages: ResMut<CurrentStage>,
 ) {
-    if input.just_pressed(KeyCode::T) && gold.buy(100) {
-        spawn_tower_at(&mut commands, cursor.0);
-    }
+    // if input.just_pressed(KeyCode::T) && gold.buy(100) {
+    //     spawn_tower_at(&mut commands, cursor.0);
+    // }
     if input.just_pressed(KeyCode::U) {
         spawn_unit_at(&mut commands, cursor.0);
     }
     if input.just_pressed(KeyCode::Y) {
         println!("Vec2::new({}, {}),", cursor.0.x, cursor.0.y);
     }
-    if input.just_pressed(KeyCode::N) {
+    if input.just_pressed(KeyCode::N) || input.just_pressed(KeyCode::Space) {
         stages.start_stage();
         info!("Starting stage {}...", stages.index);
     }

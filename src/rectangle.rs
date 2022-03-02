@@ -41,4 +41,10 @@ impl Hitbox {
         self.sx() <= other.ex() &&
         self.sy() <= other.ey()
     }
+    pub fn point_touches(&self, other: &Vec2) -> bool {
+        self.ex() >= other.x &&
+        self.ey() >= other.y &&
+        self.sx() <= other.x &&
+        self.sy() <= other.y
+    }
 }

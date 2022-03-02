@@ -1,3 +1,5 @@
+use std::slice::Iter;
+
 use bevy::prelude::*;
 
 use crate::components::{Velocity, Lives};
@@ -19,6 +21,9 @@ pub struct NavPath(Vec<Vec2>);
 impl NavPath {
     pub fn get(&self, index: usize) -> Option<Vec2> {
         self.0.get(index).cloned()
+    }
+    pub fn iter(&self) -> Iter<Vec2> {
+        self.0.iter()
     }
 }
 
