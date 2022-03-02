@@ -4,6 +4,16 @@ use crate::components::{Velocity, Lives};
 
 pub mod navdata;
 
+pub struct NavigationPlugin;
+
+impl Plugin for NavigationPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_system(follow_path)
+            .add_system(end_path);
+    }
+}
+
+
 /// A path of positions that will be traversed
 pub struct NavPath(Vec<Vec2>);
 impl NavPath {
@@ -31,12 +41,10 @@ impl PathFollow {
 }
 
 pub fn follow_path(
-    mut commands: Commands,
-    mut query: Query<(&mut Velocity, &Transform, &mut PathFollow, Entity)>,
-    mut lives: ResMut<Lives>,
+    mut query: Query<(&mut Velocity, &Transform, &mut PathFollow)>,
     path: Res<NavPath>,
 ) {
-    for (mut velocity, transform, mut navigation, entity) in query.iter_mut() {
+    for (mut velocity, transform, mut navigation) in query.iter_mut() {
         if let Some(goal) = path.get(navigation.index) {
             let position = transform.translation.truncate();
             if goal.distance_squared(position) > 100.0 {
@@ -45,11 +53,19 @@ pub fn follow_path(
             } else {
                 navigation.advance();
             }
-        } else {
-            if navigation.index == path.0.len() {
-                lives.0 -= 1;
-                navigation.index += 1;
-            }
+        }
+    }
+}
+
+pub fn end_path(
+    mut commands: Commands,
+    query: Query<(&PathFollow, Entity)>,
+    mut lives: ResMut<Lives>,
+    path: Res<NavPath>,
+) {
+    for (navigation, entity) in query.iter() {
+        if let None = path.get(navigation.index) {
+            lives.0 = lives.0.saturating_sub(1);
             commands.entity(entity).despawn_recursive();
         }
     }

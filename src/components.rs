@@ -15,7 +15,6 @@ impl Plugin for ComponentsPlugin {
             .add_system(bullet_generator)
             .add_system(aim_bullet_generators)
             .add_system(update_cursor_position)
-            .add_system(follow_path)
             .add_system(update_lifespan)
             .add_system(despawn_dead)
             .add_system(absorb_bullets);
@@ -339,6 +338,24 @@ pub fn absorb_bullets(
 }
 
 #[derive(Debug, Clone, Component, Reflect, Default)]
+pub struct StructureRect {
+    extents: Vec2,
+}
+impl StructureRect {
+    pub fn new(x: f32, y: f32) -> Self {
+        Self {
+            extents: Vec2::new(x, y),
+        }
+    }
+    pub fn from_vec2(extents: Vec2) -> Self {
+        Self { extents }
+    }
+    pub fn to_hitbox(&self) -> Hitbox {
+        Hitbox::with_extents(self.extents)
+    }
+}
+
+#[derive(Debug, Clone, Component, Reflect, Default)]
 /// Gold resource tracks how much the player can spend.
 /// On a unit, defines how much gold the player gets when they die.
 pub struct Gold(pub u32);
@@ -358,7 +375,7 @@ fn monitor_gold(gold: Res<Gold>) {
 
 #[derive(Debug, Clone, Component, Reflect, Default)]
 /// How many enemies can finish the course before the player loses.
-pub struct Lives(pub i32);
+pub struct Lives(pub u32);
 
 fn monitor_lives(lives: Res<Lives>) {
     if lives.0 > 0 {

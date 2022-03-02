@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::components::Gold;
+use crate::{components::{Gold, Lives}, stages::CurrentStage};
 
 pub struct UiPlugin;
 
@@ -41,17 +41,19 @@ fn build_ui(
         ),
         ..Default::default()
     })
-    .insert(GoldText);
+    .insert(ResourceText);
 }
 
 #[derive(Component)]
-struct GoldText;
+struct ResourceText;
 
 fn update_ui_gold(
     time: Res<Time>,
     //diagnostics: Res<Diagnostics>,
-    mut query: Query<&mut Text, With<GoldText>>,
+    mut query: Query<&mut Text, With<ResourceText>>,
     gold: Res<Gold>,
+    lives: Res<Lives>,
+    stage: Res<CurrentStage>,
 ) {
     for mut text in query.iter_mut() {
         let mut fps = 0.0;
@@ -59,8 +61,10 @@ fn update_ui_gold(
         let mut frame_time = time.delta_seconds_f64();
 
         text.sections[0].value = format!(
-            "Gold: {}",
+            "Gold: {}\nLives: {}\nStage: {}",
             gold.0,
+            lives.0,
+            stage.index,
         );
     }
 }
