@@ -262,7 +262,7 @@ pub fn despawn_dead(
 #[derive(Debug, Clone, Component, Reflect)]
 /// Damage-absorbing rectangle centered on the owning entity's transform
 pub struct DamageAbsorber {
-    extents: Vec2,
+    pub extents: Vec2,
 }
 impl DamageAbsorber {
     pub fn new(x: f32, y: f32) -> Self {
@@ -282,8 +282,8 @@ impl DamageAbsorber {
 /// Damage-dealing rectangle centered on the owning entity's transform.
 /// The "hits" field decrements with every target the bullet contacts. When it reaches 0, the bullet despawns.
 pub struct Bullet {
-    extents: Vec2,
-    damage: f32,
+    pub extents: Vec2,
+    pub damage: f32,
     hits: u32,
     already_hit: Vec<Entity>,
 }
@@ -339,7 +339,7 @@ pub fn absorb_bullets(
 
 #[derive(Debug, Clone, Component, Reflect, Default)]
 pub struct StructureRect {
-    extents: Vec2,
+    pub extents: Vec2,
 }
 impl StructureRect {
     pub fn new(x: f32, y: f32) -> Self {

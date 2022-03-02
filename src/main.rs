@@ -109,5 +109,8 @@ fn debug_keys(
         stages.start_stage();
         info!("Starting stage {}...", stages.index);
     }
-
+    if input.pressed(KeyCode::G) {
+        gold.0 += 1;
+    }
+    
 }
