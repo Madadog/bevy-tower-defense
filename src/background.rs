@@ -1,10 +1,12 @@
 use bevy::prelude::*;
 
+use crate::components::MainCamera;
+
 pub struct BackgroundPlugin;
 
 impl Plugin for BackgroundPlugin {
     fn build(&self, app: &mut App) {
-        
+        app.add_system(resize_camera);
     }
 }
 
@@ -34,6 +36,18 @@ fn resize_background(
         for mut background in backgrounds.iter_mut() {
             let scale = window.width().min(window.height());
             background.custom_size = Some(Vec2::splat(scale));
+        }
+    }
+}
+
+fn resize_camera(
+    mut camera: Query<&mut Transform, With<MainCamera>>,
+    windows: Res<Windows>,
+) {
+    if let Some(window) = windows.get_primary() {
+        for mut camera in camera.iter_mut() {
+            let scale = window.width().min(window.height()) / 1024.0;
+            camera.scale = Vec2::splat(1.0 / scale).extend(1.0);
         }
     }
 }

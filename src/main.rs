@@ -5,10 +5,12 @@ use bevy::prelude::*;
 use crate::input::*;
 use crate::components::*;
 use crate::background::*;
+use crate::pathfinding::*;
 
 mod input;
 mod components;
 mod background;
+mod pathfinding;
 
 fn main() {
     println!("Hello, world!");
@@ -19,6 +21,7 @@ fn main() {
         .add_plugin(BackgroundPlugin)
         .add_startup_system(setup)
         .add_startup_system(spawn_background)
+        .add_system(debug_keys)
         .run();
 }
 
@@ -27,7 +30,8 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn()
         .insert_bundle(
             OrthographicCameraBundle::new_2d()
-        );
+        )
+        .insert(MainCamera);
     commands.spawn()
         .insert_bundle(SpriteBundle {
             sprite: Sprite {
@@ -37,11 +41,14 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             },
             ..Default::default()
         });
-    spawn_unit(&mut commands);
-    spawn_tower(&mut commands);
+    spawn_unit_at(&mut commands, Vec2::new(-500.0, 500.0));
+    spawn_tower_at(&mut commands, Vec2::new(0.0, -100.0));
+    commands.insert_resource(
+        NavPath::map1()
+    );
 }
 
-fn spawn_unit(commands: &mut Commands) {
+fn spawn_unit_at(commands: &mut Commands, translation: Vec2) {
     commands.spawn()
         .insert_bundle(SpriteBundle {
             sprite: Sprite {
@@ -49,14 +56,15 @@ fn spawn_unit(commands: &mut Commands) {
                 custom_size: Some(Vec2::new(32.0, 32.0)),
                 ..Default::default()
             },
-            transform: Transform::from_translation(Vec3::new(-100.0, 100.0, 1.0)),
+            transform: Transform::from_translation(translation.extend(1.0)),
             ..Default::default()
         })
         .insert(Velocity::new(1.0, 0.0, 0.0))
-        .insert(AiUnit);
+        .insert(AiUnit)
+        .insert(PathFollow::new(0, 2.0));
 }
-    
-fn spawn_tower(mut commands: &mut Commands) {
+
+fn spawn_tower_at(commands: &mut Commands, translation: Vec2) {
     commands.spawn()
     .insert_bundle(SpriteBundle {
         sprite: Sprite {
@@ -64,10 +72,22 @@ fn spawn_tower(mut commands: &mut Commands) {
             custom_size: Some(Vec2::new(32.0, 32.0)),
             ..Default::default()
         },
-        transform: Transform::from_translation(Vec3::new(0.0, -100.0, 1.0)),
+        transform: Transform::from_translation(translation.extend(1.0)),
         ..Default::default()
     })
     .insert(BulletGenerator::default())
     .insert(Aim::new(250.0));
 }
 
+fn debug_keys(
+    mut commands: Commands,
+    input: Res<Input<KeyCode>>,
+    cursor: Res<CursorPosition>,
+) {
+    if input.just_pressed(KeyCode::T) {
+        spawn_tower_at(&mut commands, cursor.0);
+    }
+    if input.just_pressed(KeyCode::U) {
+        spawn_unit_at(&mut commands, cursor.0);
+    }
+}

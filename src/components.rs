@@ -1,12 +1,18 @@
 use bevy::prelude::*;
 
+use crate::pathfinding::follow_path;
+
 pub struct ComponentsPlugin;
 
 impl Plugin for ComponentsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(apply_velocity)
+        app.init_resource::<CursorPosition>()
+        .add_system(apply_velocity)
         .add_system(bullet_generator)
-        .add_system(aim_bullet_generators);
+        .add_system(aim_bullet_generators)
+        .add_system(print_cursor_location)
+        .add_system(update_cursor_position)
+        .add_system(follow_path);
     }
 }
 
@@ -38,14 +44,16 @@ fn apply_velocity(mut query: Query<(&mut Transform, &mut Velocity)>) {
 #[derive(Clone, Debug, Component, Reflect)]
 pub struct BulletGenerator {
     pub aim: Vec2,
-    pub timer: Timer,
+    pub cooldown: Timer,
+    pub shooting: bool,
 }
 
 impl Default for BulletGenerator {
     fn default() -> Self {
         Self {
             aim: Vec2::new(1.0, 0.0),
-            timer: Timer::from_seconds(1.0, true),
+            cooldown: Timer::from_seconds(1.0, true),
+            shooting: true,
         }
     }
 }
@@ -56,8 +64,9 @@ fn bullet_generator(
     time: Res<Time>,
 ) {
     for (mut generator, transform) in generators.iter_mut() {
-        generator.timer.tick(time.delta());
-        if generator.timer.just_finished() {
+        generator.cooldown.tick(time.delta());
+        if generator.cooldown.finished() && generator.shooting {
+            generator.cooldown.reset();
             commands
                 .spawn()
                 .insert_bundle(SpriteBundle {
@@ -91,7 +100,7 @@ fn aim_bullet_generators(
     for (mut generator, transform, aim) in generators.iter_mut() {
         let source = transform.translation;
         let target = targets.iter().reduce(|x, y| {
-            if x.translation.distance_squared(source) < y.translation.distance_squared(source) {
+            if x.translation.distance_squared(source) > y.translation.distance_squared(source) {
                 y
             } else {
                 x
@@ -99,12 +108,14 @@ fn aim_bullet_generators(
         });
         if let Some(target) = target {
             if aim.radius.powi(2) >= target.translation.distance_squared(source) {
-                generator.timer.unpause();
+                generator.cooldown.set_repeating(true);
+                generator.shooting = true;
                 let target = target.translation.truncate();
                 let source = source.truncate();
                 generator.aim = (target - source).normalize();
             } else {
-                generator.timer.pause();
+                generator.cooldown.set_repeating(false);
+                generator.shooting = false;
             }
         };
     }
@@ -113,3 +124,48 @@ fn aim_bullet_generators(
 #[derive(Clone, Debug, Component, Reflect)]
 /// Label for computer-controlled units
 pub struct AiUnit;
+
+#[derive(Clone, Debug, Component, Reflect)]
+/// Label for the primary game camera
+pub struct MainCamera;
+
+/// Mouse location for building towers
+#[derive(Debug, Clone, Default)]
+pub struct CursorPosition(pub Vec2);
+
+/// "Get mouse window position" example from the unofficial bevy cheat sheet docs (https://bevy-cheatbook.github.io/cookbook/cursor2world.html)
+fn update_cursor_position(
+    // need to get window dimensions
+    windows: Res<Windows>,
+    // query to get camera transform
+    camera: Query<&Transform, With<MainCamera>>,
+    mut cursor_position: ResMut<CursorPosition>,
+    
+) {
+    // get the primary window
+    let wnd = windows.get_primary().unwrap();
+
+    // check if the cursor is in the primary window
+    if let Some(pos) = wnd.cursor_position() {
+        // get the size of the window
+        let size = Vec2::new(wnd.width() as f32, wnd.height() as f32);
+
+        // the default orthographic projection is in pixels from the center;
+        // just undo the translation
+        let p = pos - size / 2.0;
+
+        // assuming there is exactly one main camera entity, so this is OK
+        let camera_transform = match camera.get_single() {
+            Ok(x) => x,
+            Err(_) => return,
+        };
+
+        // apply the camera transform
+        let pos_wld = camera_transform.compute_matrix() * p.extend(0.0).extend(1.0);
+        cursor_position.0 = pos_wld.truncate().truncate();
+    }
+}
+
+fn print_cursor_location(cursor: Res<CursorPosition>) {
+    println!("{:?}", cursor);
+}
