@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use bevy::prelude::*;
 
 use crate::pathfinding::follow_path;
@@ -11,7 +13,8 @@ impl Plugin for ComponentsPlugin {
         .add_system(bullet_generator)
         .add_system(aim_bullet_generators)
         .add_system(update_cursor_position)
-        .add_system(follow_path);
+        .add_system(follow_path)
+        .add_system(update_lifespan);
     }
 }
 
@@ -45,6 +48,8 @@ pub struct BulletGenerator {
     pub aim: Vec2,
     pub cooldown: Timer,
     pub shooting: bool,
+    pub bullet_velocity: f32,
+    pub bullet_lifespan: f32,
 }
 
 impl Default for BulletGenerator {
@@ -53,6 +58,8 @@ impl Default for BulletGenerator {
             aim: Vec2::new(1.0, 0.0),
             cooldown: Timer::from_seconds(1.0, true),
             shooting: true,
+            bullet_velocity: 1.0,
+            bullet_lifespan: 5.0,
         }
     }
 }
@@ -79,7 +86,10 @@ fn bullet_generator(
                         .mul_transform(Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)))),
                     ..Default::default()
                 })
-                .insert(Velocity::new(generator.aim.x, generator.aim.y, 0.0));
+                .insert(Velocity::from_vec3(
+                    (generator.aim * generator.bullet_velocity).extend(0.0)
+                ))
+                .insert(Lifespan::new(generator.bullet_lifespan));
         }
     }
 }
@@ -162,5 +172,34 @@ fn update_cursor_position(
         // apply the camera transform
         let pos_wld = camera_transform.compute_matrix() * p.extend(0.0).extend(1.0);
         cursor_position.0 = pos_wld.truncate().truncate();
+    }
+}
+
+#[derive(Debug, Clone, Component, Reflect)]
+/// For entities that only exist for a limited length of time
+pub struct Lifespan(Timer);
+
+impl Lifespan {
+    pub fn new(time: f32) -> Self {
+        Lifespan(Timer::from_seconds(time, false))
+    }
+    pub fn tick(&mut self, delta: Duration) {
+        self.0.tick(delta);
+    }
+    pub fn finished(&self) -> bool {
+        self.0.finished()
+    }
+}
+
+pub fn update_lifespan(
+    mut commands: Commands,
+    mut query: Query<(&mut Lifespan, Entity)>,
+    time: Res<Time>,
+) {
+    for (mut life, entity) in query.iter_mut() {
+        life.tick(time.delta());
+        if life.finished() {
+            commands.entity(entity).despawn_recursive();
+        };
     }
 }

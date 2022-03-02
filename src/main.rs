@@ -61,7 +61,7 @@ fn spawn_unit_at(commands: &mut Commands, translation: Vec2) {
         })
         .insert(Velocity::new(1.0, 0.0, 0.0))
         .insert(AiUnit)
-        .insert(PathFollow::new(0, 2.0));
+        .insert(PathFollow::new(0, 1.5));
 }
 
 fn spawn_tower_at(commands: &mut Commands, translation: Vec2) {
@@ -75,7 +75,12 @@ fn spawn_tower_at(commands: &mut Commands, translation: Vec2) {
         transform: Transform::from_translation(translation.extend(1.0)),
         ..Default::default()
     })
-    .insert(BulletGenerator::default())
+    .insert(BulletGenerator {
+        cooldown: Timer::from_seconds(1.0, true),
+        bullet_velocity: 3.0,
+        bullet_lifespan: 5.0,
+        ..Default::default()
+    })
     .insert(Aim::new(250.0));
 }
 
