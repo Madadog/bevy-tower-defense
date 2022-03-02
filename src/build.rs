@@ -125,6 +125,9 @@ fn change_tower(mut indicator: Query<&mut Indicator>, input: Res<Input<KeyCode>>
         if input.just_pressed(KeyCode::V) {
             indicator.tower = TowerBundle::default();
         }
+        if input.just_pressed(KeyCode::C) {
+            indicator.tower = TowerBundle::fast();
+        }
     }
 }
 
@@ -183,6 +186,29 @@ impl TowerBundle {
             },
             aim: Aim::new(500.0),
             structure_rect: StructureRect::from_vec2(Vec2::splat(250.0)),
+            gold: Gold(200),
+        }
+    }
+    fn fast() -> Self {
+        Self {
+            sprite_bundle: SpriteBundle {
+                sprite: Sprite {
+                    color: Color::rgb(0.0, 0.3, 1.0),
+                    custom_size: Some(Vec2::splat(32.0)),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            bullet_generator: BulletGenerator {
+                cooldown: Timer::from_seconds(0.1, true),
+                bullet_velocity: 10.0,
+                bullet_lifespan: 1.0,
+                bullet_damage: 1.0,
+                bullet_hits: 1,
+                ..Default::default()
+            },
+            aim: Aim::new(300.0),
+            structure_rect: StructureRect::from_vec2(Vec2::splat(32.0)),
             gold: Gold(200),
         }
     }

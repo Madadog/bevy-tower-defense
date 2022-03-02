@@ -146,6 +146,30 @@ impl Default for Stages {
                         ),
                     ]
                 ),
+                StageData::new(100,
+                    vec![
+                        UnitGroup::new(
+                            UnitBundle::standard_tank(),
+                            10,
+                            0.4,
+                        ),
+                        UnitGroup::new(
+                            UnitBundle::standard(),
+                            5,
+                            0.4,
+                        ),
+                        UnitGroup::new(
+                            UnitBundle::standard_tank(),
+                            10,
+                            0.4,
+                        ),
+                        UnitGroup::new(
+                            UnitBundle::standard_fast(),
+                            5,
+                            0.5,
+                        ),
+                    ]
+                ),
             ]
         )
     }
@@ -171,6 +195,16 @@ impl StageData {
                 UnitBundle::standard_tank(),
                 5 + (stage / 2) as usize,
                 2.0 / stage as f32,
+            ),
+            UnitGroup::new(
+                UnitBundle::standard_fast(),
+                (stage / 3) as usize,
+                3.0 / stage as f32,
+            ),
+            UnitGroup::new(
+                UnitBundle::standard_large(),
+                (stage / 20) as usize,
+                10.0 / stage as f32,
             ),
             UnitGroup::new(
                 UnitBundle::standard_op(),

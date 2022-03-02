@@ -85,6 +85,24 @@ impl UnitBundle {
             ..Default::default()
         }
     }
+    pub fn standard_fast() -> Self {
+        Self {
+            sprite: SpriteBundle {
+                sprite: Sprite {
+                    color: Color::rgb(1.0, 1.0, 0.0),
+                    custom_size: Some(Vec2::new(32.0, 32.0)),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            velocity: Velocity::new(0.0, 0.0, 0.0),
+            path_follow: PathFollow::new(0, 4.0),
+            health: Health::new(1.0),
+            damage_absorber: DamageAbsorber::new(32.0, 32.0),
+            gold: Gold(1),
+            ..Default::default()
+        }
+    }
     pub fn standard_op() -> Self {
         Self {
             sprite: SpriteBundle {
@@ -99,6 +117,24 @@ impl UnitBundle {
             health: Health::new(20.0),
             damage_absorber: DamageAbsorber::new(32.0, 32.0),
             gold: Gold(0),
+            ..Default::default()
+        }
+    }
+    pub fn standard_large() -> Self {
+        Self {
+            sprite: SpriteBundle {
+                sprite: Sprite {
+                    color: Color::rgb(0.0, 0.5, 1.0),
+                    custom_size: Some(Vec2::new(96.0, 96.0)),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            velocity: Velocity::new(0.0, 0.0, 0.0),
+            path_follow: PathFollow::new(0, 4.0),
+            health: Health::new(100.0),
+            damage_absorber: DamageAbsorber::new(96.0, 96.0),
+            gold: Gold(1),
             ..Default::default()
         }
     }
