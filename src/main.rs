@@ -44,7 +44,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     spawn_unit_at(&mut commands, Vec2::new(-500.0, 500.0));
     spawn_tower_at(&mut commands, Vec2::new(0.0, -100.0));
     commands.insert_resource(
-        NavPath::map1()
+        pathfinding::navdata::map1()
     );
 }
 
@@ -90,4 +90,8 @@ fn debug_keys(
     if input.just_pressed(KeyCode::U) {
         spawn_unit_at(&mut commands, cursor.0);
     }
+    if input.just_pressed(KeyCode::Y) {
+        println!("Vec2::new({}, {}),", cursor.0.x, cursor.0.y);
+    }
+
 }

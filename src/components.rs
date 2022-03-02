@@ -10,7 +10,6 @@ impl Plugin for ComponentsPlugin {
         .add_system(apply_velocity)
         .add_system(bullet_generator)
         .add_system(aim_bullet_generators)
-        .add_system(print_cursor_location)
         .add_system(update_cursor_position)
         .add_system(follow_path);
     }
@@ -164,8 +163,4 @@ fn update_cursor_position(
         let pos_wld = camera_transform.compute_matrix() * p.extend(0.0).extend(1.0);
         cursor_position.0 = pos_wld.truncate().truncate();
     }
-}
-
-fn print_cursor_location(cursor: Res<CursorPosition>) {
-    println!("{:?}", cursor);
 }

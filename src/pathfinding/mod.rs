@@ -2,18 +2,11 @@ use bevy::prelude::*;
 
 use crate::components::Velocity;
 
+pub mod navdata;
+
 /// A path of positions that will be traversed
 pub struct NavPath(Vec<Vec2>);
 impl NavPath {
-    pub fn map1() -> NavPath {
-        let vec = vec![
-            Vec2::new(-500.0, 500.0),
-            Vec2::new(0.0, 500.0),
-            Vec2::new(-10.0, 100.0),
-            Vec2::new(-500.0, 100.0),
-        ];
-        NavPath(vec)
-    }
     pub fn get(&self, index: usize) -> Option<Vec2> {
         self.0.get(index).cloned()
     }
