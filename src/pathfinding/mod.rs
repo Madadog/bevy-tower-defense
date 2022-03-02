@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::components::Velocity;
+use crate::components::{Velocity, Lives};
 
 pub mod navdata;
 
@@ -31,10 +31,12 @@ impl PathFollow {
 }
 
 pub fn follow_path(
-    mut query: Query<(&mut Velocity, &Transform, &mut PathFollow)>,
+    mut commands: Commands,
+    mut query: Query<(&mut Velocity, &Transform, &mut PathFollow, Entity)>,
+    mut lives: ResMut<Lives>,
     path: Res<NavPath>,
 ) {
-    for (mut velocity, transform, mut navigation) in query.iter_mut() {
+    for (mut velocity, transform, mut navigation, entity) in query.iter_mut() {
         if let Some(goal) = path.get(navigation.index) {
             let position = transform.translation.truncate();
             if goal.distance_squared(position) > 100.0 {
@@ -43,6 +45,12 @@ pub fn follow_path(
             } else {
                 navigation.advance();
             }
+        } else {
+            if navigation.index == path.0.len() {
+                lives.0 -= 1;
+                navigation.index += 1;
+            }
+            commands.entity(entity).despawn_recursive();
         }
     }
 }

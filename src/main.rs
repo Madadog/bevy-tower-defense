@@ -6,11 +6,14 @@ use crate::input::*;
 use crate::components::*;
 use crate::background::*;
 use crate::pathfinding::*;
+use crate::ui::*;
 
 mod input;
 mod components;
 mod background;
 mod pathfinding;
+mod ui;
+mod rectangle;
 
 fn main() {
     println!("Hello, world!");
@@ -19,6 +22,7 @@ fn main() {
         .add_plugin(PlayerInputPlugin)
         .add_plugin(ComponentsPlugin)
         .add_plugin(BackgroundPlugin)
+        .add_plugin(UiPlugin)
         .add_startup_system(setup)
         .add_startup_system(spawn_background)
         .add_system(debug_keys)
@@ -46,6 +50,9 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.insert_resource(
         pathfinding::navdata::map1()
     );
+    commands.insert_resource(
+        Gold(100)
+    );
 }
 
 fn spawn_unit_at(commands: &mut Commands, translation: Vec2) {
@@ -61,7 +68,10 @@ fn spawn_unit_at(commands: &mut Commands, translation: Vec2) {
         })
         .insert(Velocity::new(1.0, 0.0, 0.0))
         .insert(AiUnit)
-        .insert(PathFollow::new(0, 1.5));
+        .insert(PathFollow::new(0, 1.5))
+        .insert(Health::new(1.0))
+        .insert(DamageAbsorber::new(32.0, 32.0))
+        .insert(Gold(1));
 }
 
 fn spawn_tower_at(commands: &mut Commands, translation: Vec2) {
@@ -79,6 +89,8 @@ fn spawn_tower_at(commands: &mut Commands, translation: Vec2) {
         cooldown: Timer::from_seconds(1.0, true),
         bullet_velocity: 3.0,
         bullet_lifespan: 5.0,
+        bullet_damage: 1.0,
+        bullet_hits: 1,
         ..Default::default()
     })
     .insert(Aim::new(250.0));
@@ -88,8 +100,9 @@ fn debug_keys(
     mut commands: Commands,
     input: Res<Input<KeyCode>>,
     cursor: Res<CursorPosition>,
+    mut gold: ResMut<Gold>,
 ) {
-    if input.just_pressed(KeyCode::T) {
+    if input.just_pressed(KeyCode::T) && gold.buy(100) {
         spawn_tower_at(&mut commands, cursor.0);
     }
     if input.just_pressed(KeyCode::U) {

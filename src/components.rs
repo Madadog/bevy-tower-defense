@@ -2,25 +2,31 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 
-use crate::pathfinding::follow_path;
+use crate::{pathfinding::follow_path, rectangle::Hitbox};
 
 pub struct ComponentsPlugin;
 
 impl Plugin for ComponentsPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<CursorPosition>()
-        .add_system(apply_velocity)
-        .add_system(bullet_generator)
-        .add_system(aim_bullet_generators)
-        .add_system(update_cursor_position)
-        .add_system(follow_path)
-        .add_system(update_lifespan);
+            .init_resource::<Gold>()
+            .insert_resource(Lives(100))
+            .add_system(apply_velocity)
+            .add_system(bullet_generator)
+            .add_system(aim_bullet_generators)
+            .add_system(update_cursor_position)
+            .add_system(follow_path)
+            .add_system(update_lifespan)
+            .add_system(despawn_dead)
+            .add_system(absorb_bullets)
+            .add_system(monitor_gold)
+            .add_system(monitor_lives);
     }
 }
 
 #[derive(Copy, Clone, Debug, Component, Reflect)]
+/// Regular old velocity that obeys Newton's first law.
 pub struct Velocity {
-    // Regular old velocity: obeys Newton's first law.
     pub velocity: Vec3,
 }
 impl Velocity {
@@ -50,6 +56,8 @@ pub struct BulletGenerator {
     pub shooting: bool,
     pub bullet_velocity: f32,
     pub bullet_lifespan: f32,
+    pub bullet_damage: f32,
+    pub bullet_hits: u32,
 }
 
 impl Default for BulletGenerator {
@@ -60,6 +68,8 @@ impl Default for BulletGenerator {
             shooting: true,
             bullet_velocity: 1.0,
             bullet_lifespan: 5.0,
+            bullet_damage: 1.0,
+            bullet_hits: 1,
         }
     }
 }
@@ -87,9 +97,14 @@ fn bullet_generator(
                     ..Default::default()
                 })
                 .insert(Velocity::from_vec3(
-                    (generator.aim * generator.bullet_velocity).extend(0.0)
+                    (generator.aim * generator.bullet_velocity).extend(0.0),
                 ))
-                .insert(Lifespan::new(generator.bullet_lifespan));
+                .insert(Lifespan::new(generator.bullet_lifespan))
+                .insert(Bullet::new(
+                    Vec2::splat(8.0),
+                    generator.bullet_damage,
+                    generator.bullet_hits,
+                ));
         }
     }
 }
@@ -99,7 +114,9 @@ pub struct Aim {
     pub radius: f32,
 }
 impl Aim {
-    pub fn new(radius: f32) -> Self { Self {radius} }
+    pub fn new(radius: f32) -> Self {
+        Self { radius }
+    }
 }
 
 fn aim_bullet_generators(
@@ -126,6 +143,9 @@ fn aim_bullet_generators(
                 generator.cooldown.set_repeating(false);
                 generator.shooting = false;
             }
+        } else {
+            generator.cooldown.set_repeating(false);
+            generator.shooting = false;
         };
     }
 }
@@ -149,7 +169,6 @@ fn update_cursor_position(
     // query to get camera transform
     camera: Query<&Transform, With<MainCamera>>,
     mut cursor_position: ResMut<CursorPosition>,
-    
 ) {
     // get the primary window
     let wnd = windows.get_primary().unwrap();
@@ -201,5 +220,152 @@ pub fn update_lifespan(
         if life.finished() {
             commands.entity(entity).despawn_recursive();
         };
+    }
+}
+
+#[derive(Debug, Clone, Component, Reflect)]
+/// Damage-absorbing rectangle centered on the owning entity's transform
+pub struct Health {
+    pub health: f32,
+    pub ignore_damage: bool,
+    pub ignore_death: bool,
+}
+impl Health {
+    pub fn new(health: f32) -> Self {
+        Self {
+            health,
+            ignore_damage: false,
+            ignore_death: false,
+        }
+    }
+    pub fn damage(&mut self, amount: f32) {
+        if !self.ignore_damage {
+            self.health -= amount;
+        }
+    }
+    pub fn dead(&self) -> bool {
+        self.health <= 0.0 && !self.ignore_death
+    }
+}
+
+pub fn despawn_dead(
+    mut commands: Commands,
+    mut query: Query<(&Health, Entity, Option<&Gold>)>,
+    mut gold_resource: ResMut<Gold>) {
+    for (health, entity, gold) in query.iter_mut() {
+        if health.dead() {
+            if let Some(gold) = gold {
+                gold_resource.0 += gold.0;
+            }
+            commands.entity(entity).despawn_recursive();
+        };
+    }
+}
+
+#[derive(Debug, Clone, Component, Reflect)]
+/// Damage-absorbing rectangle centered on the owning entity's transform
+pub struct DamageAbsorber {
+    extents: Vec2,
+}
+impl DamageAbsorber {
+    pub fn new(x: f32, y: f32) -> Self {
+        Self {
+            extents: Vec2::new(x, y),
+        }
+    }
+    pub fn from_vec2(extents: Vec2) -> Self {
+        Self { extents }
+    }
+    pub fn to_hitbox(&self) -> Hitbox {
+        Hitbox::with_extents(self.extents)
+    }
+}
+
+#[derive(Debug, Clone, Component, Reflect)]
+/// Damage-dealing rectangle centered on the owning entity's transform.
+/// The "hits" field decrements with every target the bullet contacts. When it reaches 0, the bullet despawns.
+pub struct Bullet {
+    extents: Vec2,
+    damage: f32,
+    hits: u32,
+    already_hit: Vec<Entity>,
+}
+impl Bullet {
+    pub fn new(extents: Vec2, damage: f32, hits: u32) -> Self {
+        Self {
+            extents,
+            damage,
+            hits,
+            already_hit: Vec::with_capacity(hits as usize),
+        }
+    }
+    pub fn to_hitbox(&self) -> Hitbox {
+        Hitbox::with_extents(self.extents)
+    }
+}
+impl Default for Bullet {
+    fn default() -> Self {
+        Self {
+            extents: Default::default(),
+            damage: Default::default(),
+            hits: 1,
+            already_hit: vec![],
+        }
+    }
+}
+
+pub fn absorb_bullets(
+    mut commands: Commands,
+    mut targets: Query<(&mut Health, &DamageAbsorber, &Transform, Entity)>,
+    mut bullets: Query<(&mut Bullet, &Transform, Entity)>,
+) {
+    for (mut bullet, transform, bullet_entity) in bullets.iter_mut() {
+        let bullet_rect = bullet.to_hitbox().with_translation(transform);
+        if bullet.hits == 0 {
+            commands.entity(bullet_entity).despawn_recursive();
+            break;
+        };
+        for (mut target, damage_absorber, transform, target_entity) in targets.iter_mut() {
+            if bullet.hits == 0 {
+                commands.entity(bullet_entity).despawn_recursive();
+                break;
+            };
+            let target_rect = damage_absorber.to_hitbox().with_translation(transform);
+            if bullet_rect.touches(&target_rect) && !bullet.already_hit.contains(&target_entity) {
+                target.damage(bullet.damage);
+                bullet.hits = bullet.hits.saturating_sub(1);
+                bullet.already_hit.push(target_entity);
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Component, Reflect, Default)]
+/// Gold resource tracks how much the player can spend.
+/// On a unit, defines how much gold the player gets when they die.
+pub struct Gold(pub u32);
+impl Gold {
+    pub fn buy(&mut self, cost: u32) -> bool {
+        if self.0 >= cost {
+            self.0 -= cost;
+            true
+        } else {
+            false
+        }
+    }
+}
+fn monitor_gold(gold: Res<Gold>) {
+    println!("{:?}", gold);
+}
+
+#[derive(Debug, Clone, Component, Reflect, Default)]
+/// How many enemies can finish the course before the player loses.
+pub struct Lives(pub i32);
+
+fn monitor_lives(lives: Res<Lives>) {
+    if lives.0 > 0 {
+        println!("{:?}", lives);
+    } else {
+        println!("You have lost the game.");
     }
 }
