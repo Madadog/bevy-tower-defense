@@ -137,10 +137,10 @@ fn indicator_recolour(mut indicator: Query<(&Indicator, &mut Sprite)>) {
     }
 }
 
-fn change_tower(mut indicator: Query<&mut Indicator>, input: Res<Input<KeyCode>>) {
+fn change_tower(mut indicator: Query<&mut Indicator>, input: Res<Input<KeyCode>>, asset_server: Res<AssetServer>) {
     for mut indicator in indicator.iter_mut() {
         if input.just_pressed(KeyCode::B) {
-            indicator.tower = TowerBundle::big();
+            indicator.tower = TowerBundle::big(&asset_server);
         }
         if input.just_pressed(KeyCode::V) {
             indicator.tower = TowerBundle::default();
@@ -186,7 +186,7 @@ impl Default for TowerBundle {
     }
 }
 impl TowerBundle {
-    fn big() -> Self {
+    fn big(asset_server: &AssetServer) -> Self {
         Self {
             sprite_bundle: SpriteBundle {
                 sprite: Sprite {
@@ -203,6 +203,7 @@ impl TowerBundle {
                 bullet_damage: 10.0,
                 bullet_hits: 1,
                 bullet_extents: Vec2::splat(64.0),
+                bullet_texture: asset_server.load("arrow.png"),
                 ..Default::default()
             },
             aim: Aim::new(500.0),

@@ -17,7 +17,8 @@ impl Plugin for ComponentsPlugin {
             .add_system(update_cursor_position)
             .add_system(update_lifespan)
             .add_system(despawn_dead)
-            .add_system(absorb_bullets);
+            .add_system(absorb_bullets)
+            .add_system(rotate_bullets);
     }
 }
 
@@ -46,7 +47,7 @@ fn apply_velocity(mut query: Query<(&mut Transform, &mut Velocity)>) {
     }
 }
 
-#[derive(Clone, Debug, Component, Reflect)]
+#[derive(Clone, Debug, Component)]
 pub struct BulletGenerator {
     pub aim: Vec2,
     pub cooldown: Timer,
@@ -56,6 +57,7 @@ pub struct BulletGenerator {
     pub bullet_damage: f32,
     pub bullet_hits: u32,
     pub bullet_extents: Vec2,
+    pub bullet_texture: Handle<Image>,
 }
 
 impl Default for BulletGenerator {
@@ -69,6 +71,7 @@ impl Default for BulletGenerator {
             bullet_damage: 1.0,
             bullet_hits: 1,
             bullet_extents: Vec2::splat(8.0),
+            bullet_texture: bevy::render::texture::DEFAULT_IMAGE_HANDLE.typed(),
         }
     }
 }
@@ -77,6 +80,7 @@ fn bullet_generator(
     mut commands: Commands,
     mut generators: Query<(&mut BulletGenerator, &Transform)>,
     time: Res<Time>,
+    asset_server: Res<AssetServer>,
 ) {
     for (mut generator, transform) in generators.iter_mut() {
         generator.cooldown.tick(time.delta());
@@ -93,6 +97,7 @@ fn bullet_generator(
                     transform: (transform
                         .clone()
                         .mul_transform(Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)))),
+                    texture: generator.bullet_texture.clone_weak(),
                     ..Default::default()
                 })
                 .insert(Velocity::from_vec3(
@@ -336,6 +341,15 @@ pub fn absorb_bullets(
                 bullet.already_hit.push(target_entity);
             }
         }
+    }
+}
+
+pub fn rotate_bullets(
+    mut bullets: Query<(&mut Transform, &Velocity), With<Bullet>>,
+) {
+    for (mut transform, velocity) in bullets.iter_mut() {
+        // *transform = transform.with_rotation(Quat::from_axis_angle(Vec3::Z, velocity.velocity.angle_between(Vec3::Y)));
+        *transform = transform.with_rotation(Quat::from_rotation_arc(Vec3::Y, velocity.velocity.normalize()));
     }
 }
 
