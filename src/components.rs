@@ -55,6 +55,7 @@ pub struct BulletGenerator {
     pub bullet_lifespan: f32,
     pub bullet_damage: f32,
     pub bullet_hits: u32,
+    pub bullet_extents: Vec2,
 }
 
 impl Default for BulletGenerator {
@@ -67,6 +68,7 @@ impl Default for BulletGenerator {
             bullet_lifespan: 5.0,
             bullet_damage: 1.0,
             bullet_hits: 1,
+            bullet_extents: Vec2::splat(8.0),
         }
     }
 }
@@ -85,7 +87,7 @@ fn bullet_generator(
                 .insert_bundle(SpriteBundle {
                     sprite: Sprite {
                         color: Color::rgb(0.0, 0.0, 0.0),
-                        custom_size: Some(Vec2::new(8.0, 8.0)),
+                        custom_size: Some(generator.bullet_extents),
                         ..Default::default()
                     },
                     transform: (transform
@@ -98,7 +100,7 @@ fn bullet_generator(
                 ))
                 .insert(Lifespan::new(generator.bullet_lifespan))
                 .insert(Bullet::new(
-                    Vec2::splat(8.0),
+                    generator.bullet_extents,
                     generator.bullet_damage,
                     generator.bullet_hits,
                 ));

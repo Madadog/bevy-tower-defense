@@ -15,6 +15,7 @@ impl Plugin for BuildPlugin {
             .add_system(indicator_follow_mouse)
             .add_system(indicator_build)
             .add_system(indicator_resize)
+            .add_system(indicator_recolour)
             .add_system(change_tower);
     }
 }
@@ -36,33 +37,44 @@ fn spawn_indicator(mut commands: Commands) {
 #[derive(Clone, Component, Default)]
 /// Marker for entity where building occurs
 pub struct Indicator {
-    can_build: bool,
+    overlapping: bool,
+    out_of_bounds: bool,
     tower: TowerBundle,
 }
 impl Indicator {
     pub fn new() -> Self {
         Self {
-            can_build: true,
+            overlapping: false,
+            out_of_bounds: false,
             tower: TowerBundle::default(),
         }
+    }
+    pub fn can_build(&self) -> bool {
+        !self.overlapping && !self.out_of_bounds
     }
 }
 
 fn indicator_follow_mouse(
     mouse: Res<CursorPosition>,
-    mut indicator: Query<&mut Transform, With<Indicator>>,
+    mut indicator: Query<(&mut Transform, &mut Indicator)>,
 ) {
-    for mut transform in indicator.iter_mut() {
-        transform.translation = mouse.0.extend(3.0);
+    for (mut transform, mut indicator) in indicator.iter_mut() {
+        transform.translation = mouse.0.clamp(Vec2::splat(-512.0), Vec2::splat(512.0)).extend(3.0);
+        if mouse.0.x > -512.0 && mouse.0.x < 512.0
+        && mouse.0.y > -512.0 && mouse.0.y < 512.0 {
+            indicator.out_of_bounds = false;
+        } else {
+            indicator.out_of_bounds = true;
+        }
     }
 }
 
 fn indicator_overlap(
-    mut indicator: Query<(&Transform, &mut Indicator, &mut Sprite)>,
+    mut indicator: Query<(&Transform, &mut Indicator)>,
     structures: Query<(&Transform, &StructureRect), Without<Indicator>>,
     path: Res<NavPath>,
 ) {
-    for (indicator_transform, mut indicator, mut sprite) in indicator.iter_mut() {
+    for (indicator_transform, mut indicator) in indicator.iter_mut() {
         let indicator_rect = Hitbox::with_extents(indicator.tower.structure_rect.extents)
             .with_translation(indicator_transform);
         let mut overlaps = structures
@@ -81,11 +93,9 @@ fn indicator_overlap(
             })
             .count();
         if overlaps == 0 {
-            sprite.color = Color::rgba(0.0, 0.5, 0.0, 0.5);
-            indicator.can_build = true;
+            indicator.overlapping = false;
         } else {
-            sprite.color = Color::rgba(0.5, 0.0, 0.0, 0.5);
-            indicator.can_build = false;
+            indicator.overlapping = true;
         }
     }
 }
@@ -99,7 +109,7 @@ fn indicator_build(
 ) {
     for (transform, indicator) in indicator.iter() {
         if (input.just_pressed(KeyCode::T) || mouse.just_pressed(MouseButton::Left))
-            && indicator.can_build
+            && indicator.can_build()
             && gold.buy(indicator.tower.gold.0)
         {
             let mut translation = transform.translation;
@@ -114,6 +124,16 @@ fn indicator_build(
 fn indicator_resize(mut indicator: Query<(&Indicator, &mut Sprite)>) {
     for (indicator, mut sprite) in indicator.iter_mut() {
         sprite.custom_size = Some(indicator.tower.structure_rect.extents);
+    }
+}
+
+fn indicator_recolour(mut indicator: Query<(&Indicator, &mut Sprite)>) {
+    for (indicator, mut sprite) in indicator.iter_mut() {
+        if indicator.can_build() {
+            sprite.color = Color::rgba(0.0, 0.5, 0.0, 0.5);
+        } else {
+            sprite.color = Color::rgba(0.5, 0.0, 0.0, 0.5);
+        }
     }
 }
 
@@ -182,6 +202,7 @@ impl TowerBundle {
                 bullet_lifespan: 1.0,
                 bullet_damage: 10.0,
                 bullet_hits: 1,
+                bullet_extents: Vec2::splat(64.0),
                 ..Default::default()
             },
             aim: Aim::new(500.0),
@@ -209,7 +230,7 @@ impl TowerBundle {
             },
             aim: Aim::new(300.0),
             structure_rect: StructureRect::from_vec2(Vec2::splat(32.0)),
-            gold: Gold(200),
+            gold: Gold(800),
         }
     }
 }
