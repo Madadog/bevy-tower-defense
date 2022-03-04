@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 
-use crate::{pathfinding::follow_path, rectangle::Hitbox};
+use crate::rectangle::Hitbox;
 
 pub struct ComponentsPlugin;
 
@@ -38,11 +38,8 @@ impl Velocity {
         Self { velocity }
     }
 }
-impl Velocity {
-    pub const ZERO: Velocity = Velocity::from_vec3(Vec3::ZERO);
-}
-fn apply_velocity(mut query: Query<(&mut Transform, &mut Velocity)>) {
-    for (mut transform, mut velocity) in query.iter_mut() {
+fn apply_velocity(mut query: Query<(&mut Transform, &Velocity)>) {
+    for (mut transform, velocity) in query.iter_mut() {
         transform.translation += velocity.velocity;
     }
 }
@@ -80,7 +77,6 @@ fn bullet_generator(
     mut commands: Commands,
     mut generators: Query<(&mut BulletGenerator, &Transform)>,
     time: Res<Time>,
-    asset_server: Res<AssetServer>,
 ) {
     for (mut generator, transform) in generators.iter_mut() {
         generator.cooldown.tick(time.delta());
@@ -385,18 +381,7 @@ impl Gold {
         }
     }
 }
-fn monitor_gold(gold: Res<Gold>) {
-    println!("{:?}", gold);
-}
 
 #[derive(Debug, Clone, Component, Reflect, Default)]
 /// How many enemies can finish the course before the player loses.
 pub struct Lives(pub u32);
-
-fn monitor_lives(lives: Res<Lives>) {
-    if lives.0 > 0 {
-        println!("{:?}", lives);
-    } else {
-        println!("You have lost the game.");
-    }
-}

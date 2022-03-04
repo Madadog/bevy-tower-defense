@@ -28,18 +28,6 @@ pub fn spawn_background(mut commands: Commands, asset_server: ResMut<AssetServer
     .insert(Background);
 }
 
-fn resize_background(
-    mut backgrounds: Query<&mut Sprite, With<Background>>,
-    windows: Res<Windows>,
-) {
-    if let Some(window) = windows.get_primary() {
-        for mut background in backgrounds.iter_mut() {
-            let scale = window.width().min(window.height());
-            background.custom_size = Some(Vec2::splat(scale));
-        }
-    }
-}
-
 fn resize_camera(
     mut camera: Query<&mut Transform, With<MainCamera>>,
     windows: Res<Windows>,

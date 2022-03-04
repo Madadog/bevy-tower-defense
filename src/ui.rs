@@ -7,7 +7,6 @@ pub struct UiPlugin;
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_startup_system(build_ui)
             .add_startup_system(setup)
             .add_system(button_system)
             .add_system(update_ui_gold)
@@ -15,32 +14,16 @@ impl Plugin for UiPlugin {
     }
 }
 
-fn build_ui(
-    mut commands: Commands,
-    asset_server: ResMut<AssetServer>,
-) {
-    commands.spawn_bundle(UiCameraBundle::default());
-    // let font = asset_server.load("fonts/NotoSans-Regular.ttf");
-
-    
-}
-
 #[derive(Component)]
 struct ResourceText;
 
 fn update_ui_gold(
-    time: Res<Time>,
-    //diagnostics: Res<Diagnostics>,
     mut query: Query<&mut Text, With<ResourceText>>,
     gold: Res<Gold>,
     lives: Res<Lives>,
     stage: Res<CurrentStage>,
 ) {
     for mut text in query.iter_mut() {
-        let mut fps = 0.0;
-
-        let mut frame_time = time.delta_seconds_f64();
-
         text.sections[0].value = format!(
             "Gold: {}\nLives: {}\nStage: {}",
             gold.0,

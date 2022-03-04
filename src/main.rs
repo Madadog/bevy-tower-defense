@@ -1,8 +1,5 @@
-use std::default;
-
 use bevy::prelude::*;
 
-use crate::input::*;
 use crate::components::*;
 use crate::background::*;
 use crate::pathfinding::*;
@@ -11,7 +8,6 @@ use crate::stages::*;
 use crate::build::*;
 use crate::gameover::*;
 
-mod input;
 mod components;
 mod background;
 mod pathfinding;
@@ -32,7 +28,6 @@ fn main() {
         })
         .insert_resource(ClearColor(Color::BLACK))
         .add_plugins(DefaultPlugins)
-        .add_plugin(PlayerInputPlugin)
         .add_plugin(ComponentsPlugin)
         .add_plugin(BackgroundPlugin)
         .add_plugin(NavigationPlugin)
@@ -47,7 +42,7 @@ fn main() {
 }
 
 
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn setup(mut commands: Commands) {
     commands.spawn()
         .insert_bundle(
             OrthographicCameraBundle::new_2d()
@@ -76,29 +71,6 @@ fn spawn_unit_at(commands: &mut Commands, translation: Vec2) {
         .insert(Transform::from_translation(translation.extend(1.0)));
 }
 
-fn spawn_tower_at(commands: &mut Commands, translation: Vec2) {
-    commands.spawn()
-    .insert_bundle(SpriteBundle {
-        sprite: Sprite {
-            color: Color::rgb(0.0, 1.0, 0.0),
-            custom_size: Some(Vec2::new(32.0, 32.0)),
-            ..Default::default()
-        },
-        transform: Transform::from_translation(translation.extend(1.0)),
-        ..Default::default()
-    })
-    .insert(BulletGenerator {
-        cooldown: Timer::from_seconds(0.6, true),
-        bullet_velocity: 6.0,
-        bullet_lifespan: 1.0,
-        bullet_damage: 1.0,
-        bullet_hits: 1,
-        ..Default::default()
-    })
-    .insert(Aim::new(250.0))
-    .insert(StructureRect::from_vec2(Vec2::splat(32.0)));
-}
-
 fn debug_keys(
     mut commands: Commands,
     input: Res<Input<KeyCode>>,
@@ -106,9 +78,6 @@ fn debug_keys(
     mut gold: ResMut<Gold>,
     mut stages: ResMut<CurrentStage>,
 ) {
-    // if input.just_pressed(KeyCode::T) && gold.buy(100) {
-    //     spawn_tower_at(&mut commands, cursor.0);
-    // }
     if input.just_pressed(KeyCode::U) {
         spawn_unit_at(&mut commands, cursor.0);
     }
@@ -122,5 +91,4 @@ fn debug_keys(
     if input.pressed(KeyCode::G) {
         gold.0 += 1;
     }
-    
 }
