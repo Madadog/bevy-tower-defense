@@ -9,6 +9,7 @@ use crate::pathfinding::*;
 use crate::ui::*;
 use crate::stages::*;
 use crate::build::*;
+use crate::gameover::*;
 
 mod input;
 mod components;
@@ -18,6 +19,7 @@ mod ui;
 mod rectangle;
 mod stages;
 mod build;
+mod gameover;
 
 fn main() {
     println!("Hello, world!");
@@ -37,6 +39,7 @@ fn main() {
         .add_plugin(StagePlugin)
         .add_plugin(UiPlugin)
         .add_plugin(BuildPlugin)
+        .add_plugin(GameOverPlugin)
         .add_startup_system(setup)
         .add_startup_system(spawn_background)
         .add_system(debug_keys)

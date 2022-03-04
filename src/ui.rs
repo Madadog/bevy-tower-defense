@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{components::{Gold, Lives}, stages::CurrentStage};
+use crate::{components::{Gold, Lives}, stages::CurrentStage, build::{TowerBundle, BuildIndicator}};
 
 pub struct UiPlugin;
 
@@ -55,18 +55,31 @@ const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
 const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
 
 #[derive(Component)]
-struct TowerButton;
+struct TowerButton {
+    tower_bundle: TowerBundle,
+}
+impl TowerButton {
+    fn new(tower_bundle: TowerBundle) -> Self {
+        Self {
+            tower_bundle
+        }
+    }
+}
 
 fn button_system(
     mut interaction_query: Query<
-        (&Interaction, &mut UiColor, &Children),
-        (Changed<Interaction>, With<Button>, With<TowerButton>),
+        (&Interaction, &mut UiColor, &TowerButton),
+        (Changed<Interaction>, With<Button>),
     >,
+    mut indicator: Query<&mut BuildIndicator>,
 ) {
-    for (interaction, mut color, children) in interaction_query.iter_mut() {
+    for (interaction, mut color, tower) in interaction_query.iter_mut() {
         match *interaction {
             Interaction::Clicked => {
                 *color = PRESSED_BUTTON.into();
+                for mut indicator in indicator.iter_mut() {
+                    indicator.tower = tower.tower_bundle.clone();
+                }
             }
             Interaction::Hovered => {
                 *color = HOVERED_BUTTON.into();
@@ -90,21 +103,21 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             parent
                 .spawn_bundle(left_fill(Val::Auto))
                 .with_children(|parent| {
-                    parent.spawn_bundle(tower_button())
+                    parent.spawn_bundle(tower_button(TowerBundle::dart(&asset_server)))
                     .with_children(|parent| {
-                        parent.spawn_bundle(tower_text("Default Tower", font.clone()));
+                        parent.spawn_bundle(tower_text("Dart Tower ($100)", font.clone()));
                     });
-                    parent.spawn_bundle(tower_button())
+                    parent.spawn_bundle(tower_button(TowerBundle::big(&asset_server)))
                     .with_children(|parent| {
-                        parent.spawn_bundle(tower_text("Big Tower", font.clone()));
+                        parent.spawn_bundle(tower_text("Big Tower ($200)", font.clone()));
                     });
-                    parent.spawn_bundle(tower_button())
+                    parent.spawn_bundle(tower_button(TowerBundle::fast()))
                     .with_children(|parent| {
-                        parent.spawn_bundle(tower_text("Fast Tower", font.clone()));
+                        parent.spawn_bundle(tower_text("Fast Tower ($800)", font.clone()));
                     });
-                    parent.spawn_bundle(tower_button())
+                    parent.spawn_bundle(tower_button(TowerBundle::default()))
                     .with_children(|parent| {
-                        parent.spawn_bundle(tower_text("Strong Tower", font.clone()));
+                        parent.spawn_bundle(tower_text("Strong Tower ($2000)", font.clone()));
                     });
                 });
             parent
@@ -147,7 +160,7 @@ fn left_fill(height: Val) -> NodeBundle {
                 ..Default::default()
             },
             justify_content: JustifyContent::FlexEnd,
-            flex_direction: FlexDirection::Column,
+            flex_direction: FlexDirection::ColumnReverse,
             ..Default::default()
         },
         color: Color::rgb(0.85, 0.85, 0.85).into(),
@@ -155,7 +168,7 @@ fn left_fill(height: Val) -> NodeBundle {
     }
 }
 
-fn screen_fill_node() -> NodeBundle {
+pub fn screen_fill_node() -> NodeBundle {
     NodeBundle {
         style: Style {
             size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
@@ -174,7 +187,7 @@ fn resource_text(font: Handle<Font>) -> TextBundle {
         style: Style {
             align_self: AlignSelf::FlexStart,
             position: Rect {
-                top: Val::Px(0.0),
+                top: Val::Px(-10.0),
                 left: Val::Px(0.0),
                 ..Default::default()
             },
@@ -200,17 +213,17 @@ struct TowerButtonBundle {
     tower_button: TowerButton,
 }
 
-fn tower_button() -> TowerButtonBundle {
+fn tower_button(tower_bundle: TowerBundle) -> TowerButtonBundle {
     TowerButtonBundle {
         button_bundle: ButtonBundle {
             style: Style {
-                size: Size::new(Val::Px(150.0), Val::Px(30.0)),
+                size: Size::new(Val::Auto, Val::Px(30.0)),
                 // center button
                 margin: Rect {
                     top: Val::Px(5.0),
                     bottom: Val::Px(5.0),
-                    left: Val::Auto,
-                    right: Val::Auto,
+                    left: Val::Px(0.0),
+                    right: Val::Px(0.0),
                 },
                 // horizontally center child text
                 justify_content: JustifyContent::Center,
@@ -221,7 +234,7 @@ fn tower_button() -> TowerButtonBundle {
             color: NORMAL_BUTTON.into(),
             ..Default::default()
         },
-        tower_button: TowerButton,
+        tower_button: TowerButton::new(tower_bundle),
     }
 }
 

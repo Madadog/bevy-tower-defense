@@ -20,10 +20,10 @@ impl Plugin for BuildPlugin {
     }
 }
 
-fn spawn_indicator(mut commands: Commands) {
+fn spawn_indicator(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn()
-        .insert(Indicator::new())
+        .insert(BuildIndicator::new(&asset_server))
         .insert_bundle(SpriteBundle {
             sprite: Sprite {
                 color: Color::rgba(0.0, 0.5, 0.0, 0.5),
@@ -36,17 +36,17 @@ fn spawn_indicator(mut commands: Commands) {
 
 #[derive(Clone, Component, Default)]
 /// Marker for entity where building occurs
-pub struct Indicator {
+pub struct BuildIndicator {
     overlapping: bool,
     out_of_bounds: bool,
-    tower: TowerBundle,
+    pub tower: TowerBundle,
 }
-impl Indicator {
-    pub fn new() -> Self {
+impl BuildIndicator {
+    pub fn new(asset_server: &AssetServer) -> Self {
         Self {
             overlapping: false,
             out_of_bounds: false,
-            tower: TowerBundle::default(),
+            tower: TowerBundle::dart(asset_server),
         }
     }
     pub fn can_build(&self) -> bool {
@@ -56,7 +56,7 @@ impl Indicator {
 
 fn indicator_follow_mouse(
     mouse: Res<CursorPosition>,
-    mut indicator: Query<(&mut Transform, &mut Indicator)>,
+    mut indicator: Query<(&mut Transform, &mut BuildIndicator)>,
 ) {
     for (mut transform, mut indicator) in indicator.iter_mut() {
         transform.translation = mouse.0.clamp(Vec2::splat(-512.0), Vec2::splat(512.0)).extend(3.0);
@@ -70,9 +70,10 @@ fn indicator_follow_mouse(
 }
 
 fn indicator_overlap(
-    mut indicator: Query<(&Transform, &mut Indicator)>,
-    structures: Query<(&Transform, &StructureRect), Without<Indicator>>,
+    mut indicator: Query<(&Transform, &mut BuildIndicator)>,
+    structures: Query<(&Transform, &StructureRect), Without<BuildIndicator>>,
     path: Res<NavPath>,
+    gold: Res<Gold>,
 ) {
     for (indicator_transform, mut indicator) in indicator.iter_mut() {
         let indicator_rect = Hitbox::with_extents(indicator.tower.structure_rect.extents)
@@ -92,7 +93,7 @@ fn indicator_overlap(
                     < (indicator.tower.structure_rect.extents.x / 2.0 + 20.0).powi(2)
             })
             .count();
-        if overlaps == 0 {
+        if overlaps == 0 && indicator.tower.gold.0 <= gold.0 {
             indicator.overlapping = false;
         } else {
             indicator.overlapping = true;
@@ -102,7 +103,7 @@ fn indicator_overlap(
 
 fn indicator_build(
     mut commands: Commands,
-    indicator: Query<(&Transform, &Indicator)>,
+    indicator: Query<(&Transform, &BuildIndicator)>,
     mut gold: ResMut<Gold>,
     input: Res<Input<KeyCode>>,
     mouse: Res<Input<MouseButton>>,
@@ -121,13 +122,13 @@ fn indicator_build(
     }
 }
 
-fn indicator_resize(mut indicator: Query<(&Indicator, &mut Sprite)>) {
+fn indicator_resize(mut indicator: Query<(&BuildIndicator, &mut Sprite)>) {
     for (indicator, mut sprite) in indicator.iter_mut() {
         sprite.custom_size = Some(indicator.tower.structure_rect.extents);
     }
 }
 
-fn indicator_recolour(mut indicator: Query<(&Indicator, &mut Sprite)>) {
+fn indicator_recolour(mut indicator: Query<(&BuildIndicator, &mut Sprite)>) {
     for (indicator, mut sprite) in indicator.iter_mut() {
         if indicator.can_build() {
             sprite.color = Color::rgba(0.0, 0.5, 0.0, 0.5);
@@ -137,13 +138,13 @@ fn indicator_recolour(mut indicator: Query<(&Indicator, &mut Sprite)>) {
     }
 }
 
-fn change_tower(mut indicator: Query<&mut Indicator>, input: Res<Input<KeyCode>>, asset_server: Res<AssetServer>) {
+fn change_tower(mut indicator: Query<&mut BuildIndicator>, input: Res<Input<KeyCode>>, asset_server: Res<AssetServer>) {
     for mut indicator in indicator.iter_mut() {
         if input.just_pressed(KeyCode::B) {
             indicator.tower = TowerBundle::big(&asset_server);
         }
         if input.just_pressed(KeyCode::V) {
-            indicator.tower = TowerBundle::default();
+            indicator.tower = TowerBundle::dart(&asset_server);
         }
         if input.just_pressed(KeyCode::C) {
             indicator.tower = TowerBundle::fast();
@@ -152,7 +153,7 @@ fn change_tower(mut indicator: Query<&mut Indicator>, input: Res<Input<KeyCode>>
 }
 
 #[derive(Bundle, Clone)]
-struct TowerBundle {
+pub struct TowerBundle {
     #[bundle]
     sprite_bundle: SpriteBundle,
     bullet_generator: BulletGenerator,
@@ -186,12 +187,27 @@ impl Default for TowerBundle {
     }
 }
 impl TowerBundle {
-    fn big(asset_server: &AssetServer) -> Self {
+    pub fn dart(asset_server: &AssetServer) -> Self {
+        Self {
+            bullet_generator: BulletGenerator {
+                bullet_texture: asset_server.load("arrow.png"),
+                cooldown: Timer::from_seconds(0.6, true),
+                bullet_velocity: 6.0,
+                bullet_lifespan: 1.0,
+                bullet_damage: 1.0,
+                bullet_hits: 1,
+                bullet_extents: Vec2::splat(16.0),
+                ..Default::default()
+            },
+            ..Default::default()
+        }
+    }
+    pub fn big(asset_server: &AssetServer) -> Self {
         Self {
             sprite_bundle: SpriteBundle {
                 sprite: Sprite {
                     color: Color::rgb(0.3, 0.3, 0.0),
-                    custom_size: Some(Vec2::splat(250.0)),
+                    custom_size: Some(Vec2::splat(150.0)),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -207,11 +223,11 @@ impl TowerBundle {
                 ..Default::default()
             },
             aim: Aim::new(500.0),
-            structure_rect: StructureRect::from_vec2(Vec2::splat(250.0)),
+            structure_rect: StructureRect::from_vec2(Vec2::splat(150.0)),
             gold: Gold(200),
         }
     }
-    fn fast() -> Self {
+    pub fn fast() -> Self {
         Self {
             sprite_bundle: SpriteBundle {
                 sprite: Sprite {
