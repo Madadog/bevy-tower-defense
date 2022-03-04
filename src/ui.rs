@@ -115,7 +115,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                     .with_children(|parent| {
                         parent.spawn_bundle(tower_text("Fast Tower ($800)", font.clone()));
                     });
-                    parent.spawn_bundle(tower_button(TowerBundle::default()))
+                    parent.spawn_bundle(tower_button(TowerBundle::strong()))
                     .with_children(|parent| {
                         parent.spawn_bundle(tower_text("Strong Tower ($2000)", font.clone()));
                     });

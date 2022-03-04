@@ -39,6 +39,7 @@ fn spawn_indicator(mut commands: Commands, asset_server: Res<AssetServer>) {
 pub struct BuildIndicator {
     overlapping: bool,
     out_of_bounds: bool,
+    //active: bool,
     pub tower: TowerBundle,
 }
 impl BuildIndicator {
@@ -50,7 +51,7 @@ impl BuildIndicator {
         }
     }
     pub fn can_build(&self) -> bool {
-        !self.overlapping && !self.out_of_bounds
+        !self.overlapping && !self.out_of_bounds// && self.active
     }
 }
 
@@ -149,6 +150,9 @@ fn change_tower(mut indicator: Query<&mut BuildIndicator>, input: Res<Input<KeyC
         if input.just_pressed(KeyCode::C) {
             indicator.tower = TowerBundle::fast();
         }
+        if input.just_pressed(KeyCode::X) {
+            indicator.tower = TowerBundle::strong();
+        }
     }
 }
 
@@ -216,8 +220,8 @@ impl TowerBundle {
                 cooldown: Timer::from_seconds(1.5, true),
                 bullet_velocity: 10.0,
                 bullet_lifespan: 1.0,
-                bullet_damage: 10.0,
-                bullet_hits: 1,
+                bullet_damage: 5.0,
+                bullet_hits: 3,
                 bullet_extents: Vec2::splat(64.0),
                 bullet_texture: asset_server.load("arrow.png"),
                 ..Default::default()
@@ -232,7 +236,7 @@ impl TowerBundle {
             sprite_bundle: SpriteBundle {
                 sprite: Sprite {
                     color: Color::rgb(0.0, 0.3, 1.0),
-                    custom_size: Some(Vec2::splat(32.0)),
+                    custom_size: Some(Vec2::splat(36.0)),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -246,8 +250,32 @@ impl TowerBundle {
                 ..Default::default()
             },
             aim: Aim::new(300.0),
-            structure_rect: StructureRect::from_vec2(Vec2::splat(32.0)),
+            structure_rect: StructureRect::from_vec2(Vec2::splat(36.0)),
             gold: Gold(800),
+        }
+    }
+    pub fn strong() -> Self {
+        Self {
+            sprite_bundle: SpriteBundle {
+                sprite: Sprite {
+                    color: Color::rgb(0.9, 0.1, 0.3),
+                    custom_size: Some(Vec2::splat(48.0)),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            bullet_generator: BulletGenerator {
+                cooldown: Timer::from_seconds(0.1, true),
+                bullet_velocity: 27.0,
+                bullet_lifespan: 1.0,
+                bullet_damage: 1.0,
+                bullet_hits: 3,
+                bullet_extents: Vec2::splat(32.0),
+                ..Default::default()
+            },
+            aim: Aim::new(800.0),
+            structure_rect: StructureRect::from_vec2(Vec2::splat(48.0)),
+            gold: Gold(2000),
         }
     }
 }
