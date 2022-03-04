@@ -9,8 +9,8 @@ impl Plugin for UiPlugin {
         app
             .add_startup_system(setup)
             .add_system(button_system)
-            .add_system(update_ui_gold)
-        ;
+            .add_system(button_start_system)
+            .add_system(update_ui_gold);
     }
 }
 
@@ -36,6 +36,9 @@ fn update_ui_gold(
 const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
 const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
 const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
+
+#[derive(Component)]
+struct StartButton;
 
 #[derive(Component)]
 struct TowerButton {
@@ -73,6 +76,29 @@ fn button_system(
         }
     }
 }
+fn button_start_system(
+    mut interaction_query: Query<
+        (&Interaction, &mut UiColor),
+        (Changed<Interaction>, With<Button>, With<StartButton>),
+    >,
+    mut stages: ResMut<CurrentStage>,
+) {
+    for (interaction, mut color) in interaction_query.iter_mut() {
+        match *interaction {
+            Interaction::Clicked => {
+                *color = Color::rgb(0.5, 1.0, 0.5).into();
+                stages.start_stage();
+                info!("Starting stage {}...", stages.index);
+            }
+            Interaction::Hovered => {
+                *color = Color::rgb(0.4, 0.8, 0.4).into();
+            }
+            Interaction::None => {
+                *color = Color::rgb(0.2, 0.65, 0.2).into();
+            }
+        }
+    }
+}
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     // ui camera
@@ -101,6 +127,10 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                     parent.spawn_bundle(tower_button(TowerBundle::strong()))
                     .with_children(|parent| {
                         parent.spawn_bundle(tower_text("Strong Tower ($2000)", font.clone()));
+                    });
+                    parent.spawn_bundle(start_button())
+                    .with_children(|parent| {
+                        parent.spawn_bundle(tower_text("Send Wave", font.clone()));
                     });
                 });
             parent
@@ -196,6 +226,13 @@ struct TowerButtonBundle {
     tower_button: TowerButton,
 }
 
+#[derive(Bundle)]
+struct StartButtonBundle {
+    #[bundle]
+    button_bundle: ButtonBundle,
+    start_button: StartButton,
+}
+
 fn tower_button(tower_bundle: TowerBundle) -> TowerButtonBundle {
     TowerButtonBundle {
         button_bundle: ButtonBundle {
@@ -218,6 +255,30 @@ fn tower_button(tower_bundle: TowerBundle) -> TowerButtonBundle {
             ..Default::default()
         },
         tower_button: TowerButton::new(tower_bundle),
+    }
+}
+fn start_button() -> StartButtonBundle {
+    StartButtonBundle {
+        button_bundle: ButtonBundle {
+            style: Style {
+                size: Size::new(Val::Auto, Val::Px(50.0)),
+                // center button
+                margin: Rect {
+                    top: Val::Px(15.0),
+                    bottom: Val::Px(5.0),
+                    left: Val::Px(0.0),
+                    right: Val::Px(0.0),
+                },
+                // horizontally center child text
+                justify_content: JustifyContent::Center,
+                // vertically center child text
+                align_items: AlignItems::Center,
+                ..Default::default()
+            },
+            color: NORMAL_BUTTON.into(),
+            ..Default::default()
+        },
+        start_button: StartButton,
     }
 }
 

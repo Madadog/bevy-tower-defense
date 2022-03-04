@@ -208,7 +208,7 @@ impl StageData {
             ),
             UnitGroup::new(
                 UnitBundle::standard_op(),
-                (stage / 10) as usize,
+                (stage / 21) as usize,
                 10.0 / stage as f32,
             ),
         ];
