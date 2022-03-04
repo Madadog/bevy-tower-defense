@@ -22,6 +22,13 @@ mod build;
 fn main() {
     println!("Hello, world!");
     App::new()
+        .insert_resource(WindowDescriptor {
+            title: "I am a window!".to_string(),
+            width: 880.,
+            height: 479.,
+            ..Default::default()
+        })
+        .insert_resource(ClearColor(Color::BLACK))
         .add_plugins(DefaultPlugins)
         .add_plugin(PlayerInputPlugin)
         .add_plugin(ComponentsPlugin)
