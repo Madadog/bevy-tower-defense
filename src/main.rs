@@ -23,7 +23,7 @@ fn main() {
     println!("Hello, world!");
     App::new()
         .insert_resource(WindowDescriptor {
-            title: "I am a window!".to_string(),
+            title: "Bevy Tower Defence".to_string(),
             width: 880.,
             height: 479.,
             ..Default::default()
